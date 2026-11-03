@@ -1,4 +1,5 @@
-const MEMBERS_URL="https://claude.ai/artifact/LgSZe4UDTRhBn8YiXDC1XZ";
+const PUBLIC_SITE=true;
+const PUB=typeof PUBLIC_SITE!=="undefined";
 /* ============================== STATIC CONTENT ============================== */
 const QC_OPTS=["Quantity A is greater.","Quantity B is greater.","The two quantities are equal.","The relationship cannot be determined from the information given."];
 const QUESTIONS=[
@@ -229,6 +230,64 @@ function genQuant(key,n,target,withDI){
   const mid=Math.floor(rest.length/2);return[...qcs,...rest.slice(0,mid),...di,...rest.slice(mid)];
 }
 
+/* ============================== VERBAL GENERATOR ============================== */
+// Meaning clusters: near-synonyms (valid answer pairs) + sentences whose clue points to that meaning.
+// Distractors come from clusters with the same part of speech that are not close in meaning, so each item has one defensible answer.
+const VCL=[
+{k:"talk",pos:"a",d:2,m:"talkative",w:["garrulous","loquacious","voluble"],f:["Her ______ neighbor could turn a two-minute greeting into an hour-long monologue.","Known for being ______, the host rarely let a guest finish a sentence.","The usually ______ professor surprised everyone by saying almost nothing at the meeting."]},
+{k:"quiet",pos:"a",d:2,m:"saying little; reserved",w:["taciturn","reticent","laconic"],f:["The ______ engineer answered every question with a single word, if at all.","Though famous on stage, she was ______ in interviews, rarely revealing anything about her private life."],n:["shy", "cautious"]},
+{k:"stubborn",pos:"a",d:2,m:"stubbornly unwilling to change",w:["obdurate","intransigent","recalcitrant","obstinate"],f:["Despite weeks of pleading, the landlord remained ______ and refused to lower the rent.","The ______ committee rejected every compromise the mediator proposed."],n:["angry"]},
+{k:"brief",pos:"a",d:2,m:"short-lived",w:["ephemeral","transient","fleeting","evanescent"],f:["The fashion proved ______, vanishing from stores within a single season.","Fame on social media is often ______: today's sensation is forgotten by next week."]},
+{k:"obscure",pos:"a",d:3,m:"hard to understand; known to few",w:["abstruse","arcane","esoteric","recondite"],f:["The lecture was so ______ that only specialists in the field could follow it.","Few readers can get through the philosopher's ______ prose, which assumes knowledge of a dozen dead languages."],n:["learned"]},
+{k:"clear",pos:"a",d:1,m:"clear and easy to understand",w:["lucid","limpid","intelligible"],f:["Her ______ explanation made a notoriously difficult theorem easy for beginners to grasp.","The manual's ______ instructions meant no one needed to call the help line."]},
+{k:"cautious",pos:"a",d:2,m:"cautious",w:["circumspect","wary","chary","prudent"],f:["Burned by earlier scandals, the investors were ______ about funding another unproven startup.","A ______ diplomat, she weighed every word before speaking to the press."],n:["shy"]},
+{k:"rash",pos:"a",d:2,m:"acting hastily without thought",w:["impetuous","rash","precipitate","impulsive"],f:["His ______ decision to quit without another job lined up left him scrambling for rent.","The general's ______ charge, ordered before scouts returned, cost him half his army."]},
+{k:"hopeful",pos:"a",d:2,m:"optimistic",w:["sanguine","hopeful","buoyant"],f:["Even after the poor quarterly results, the CEO remained ______ about the company's prospects.","Doctors were ______ about her recovery, predicting she would walk again within months."],n:["calm", "cautious"]},
+{k:"harmful",pos:"a",d:3,m:"harmful, especially in a gradual or hidden way",w:["pernicious","insidious","deleterious"],f:["The ______ effects of the policy went unnoticed for years, quietly eroding public trust.","Mold can be ______: it damages a building long before anyone sees it."]},
+{k:"lazy",pos:"a",d:1,m:"lazy; avoiding effort",w:["indolent","slothful","idle"],f:["The once-energetic clerk had grown ______, doing the bare minimum and napping at his desk.","Critics called the sequel ______ filmmaking, recycling the original's jokes instead of writing new ones."],n:["trite"]},
+{k:"diligent",pos:"a",d:2,m:"hardworking and careful",w:["assiduous","diligent","sedulous","industrious"],f:["Thanks to her ______ research, checking every source twice, the biography contained no errors.","The ______ apprentice arrived first every morning and left only when the last tool was cleaned."],n:["cautious"]},
+{k:"servile",pos:"a",d:2,m:"excessively eager to please",w:["obsequious","sycophantic","fawning","servile"],f:["The ______ assistant agreed with every remark the director made, however foolish.","Waiters at the club were almost ______, bowing to members and laughing at their every joke."]},
+{k:"generous",pos:"a",d:2,m:"generous, especially to a rival",w:["magnanimous","gracious","big-hearted"],f:["In victory the champion was ______, praising her defeated rival's courage.","The ______ founder forgave the employee who had nearly ruined the company."]},
+{k:"trite",pos:"a",d:1,m:"overused and unoriginal",w:["banal","trite","hackneyed","clichéd"],f:["The film's ______ dialogue was full of lines audiences had heard a hundred times before.","The speech was so ______ that listeners could finish each sentence before she did."]},
+{k:"calm",pos:"a",d:1,m:"calm and untroubled",w:["placid","serene","tranquil","composed"],f:["Even as the storm battered the ship, the captain remained ______, issuing orders in a steady voice.","The lake was ______ at dawn, its surface unbroken by a single ripple."],n:["hopeful"]},
+{k:"angry",pos:"a",d:2,m:"easily angered",w:["irascible","choleric","cantankerous","testy"],f:["The ______ old editor would explode at the smallest typo.","Hungry and tired, the usually cheerful toddler had become ______, crying at every refusal."]},
+{k:"shy",pos:"a",d:2,m:"shy; lacking confidence",w:["diffident","timid","bashful"],f:["The ______ intern rarely spoke up in meetings, even when she knew the answer.","Once ______ about her singing, she now performs before thousands without nerves."],n:["quiet","cautious"]},
+{k:"fickle",pos:"a",d:2,m:"unpredictable; changeable",w:["capricious","mercurial","volatile","fickle"],f:["The ______ ruler might reward an adviser one day and banish him the next.","Mountain weather is ______: a sunny morning can turn into a blizzard by noon."],n:["angry"]},
+{k:"learned",pos:"a",d:2,m:"highly learned",w:["erudite","scholarly","learned"],f:["The ______ historian could quote primary sources in five languages from memory.","Her ______ footnotes, citing works few readers had heard of, ran longer than the chapters."],n:["obscure"]},
+{k:"naive",pos:"a",d:2,m:"too ready to believe",w:["credulous","gullible","naive"],f:["Only the most ______ investors believed the promise of 50 percent returns with no risk.","The ______ tourist paid twenty dollars for a 'genuine' gold watch from a street vendor."]},
+{k:"wasteful",pos:"a",d:3,m:"wastefully extravagant",w:["prodigal","profligate","spendthrift"],f:["After his ______ son spent the inheritance in a year, the father rewrote his will.","The ______ government borrowed heavily to build palaces while roads crumbled."],n:["frugal", "rash"]},
+{k:"frugal",pos:"a",d:1,m:"careful with money",w:["frugal","thrifty","economical"],f:["Her ______ habits — cooking at home, mending old clothes — let her save half her salary.","Raised during hard times, he stayed ______ all his life, reusing envelopes and turning off every light."],n:["wasteful"]},
+{k:"praise",pos:"v",d:2,m:"to praise highly",w:["laud","extol","acclaim","exalt"],f:["Critics who once dismissed the director now ______ her as a visionary.","Historians continue to ______ the treaty as the most important of the century."]},
+{k:"criticize",pos:"v",d:3,m:"to criticize severely",w:["castigate","excoriate","berate","censure"],f:["The editorial went on to ______ the mayor for ignoring the flood warnings.","Rather than praise the team, the coach chose to ______ the players for their sloppy defense."],n:["refute"]},
+{k:"soothe",pos:"v",d:2,m:"to calm someone's anger",w:["placate","mollify","appease","pacify"],f:["The airline offered free vouchers to ______ passengers furious about the delay.","Nothing the manager said could ______ the customer, who demanded a full refund."],n:["lessen"]},
+{k:"worsen",pos:"v",d:2,m:"to make worse",w:["exacerbate","aggravate","intensify","compound"],f:["Cutting the hospital's budget would only ______ the staffing shortage it already faces.","Scratching the rash will ______ the itching rather than relieve it."],n:["undermine"]},
+{k:"lessen",pos:"v",d:2,m:"to make less severe",w:["mitigate","alleviate","attenuate","allay"],f:["Planting trees along the river helped ______ the damage caused by seasonal flooding.","The new medication did little to ______ her chronic pain."],n:["soothe"]},
+{k:"waver",pos:"v",d:2,m:"to waver between choices",w:["vacillate","waver","dither","oscillate"],f:["Unable to choose between the two offers, he continued to ______ until both expired.","Voters tend to ______ in the final weeks, leaning one way and then the other."]},
+{k:"support",pos:"v",d:2,m:"to support or strengthen",w:["bolster","buttress","reinforce","fortify"],f:["New fossil evidence served to ______ the theory that birds descended from dinosaurs.","The company hired a famous chef to ______ its reputation for fine dining."],n:["confirm", "refute", "undermine"]},
+{k:"undermine",pos:"v",d:2,m:"to weaken gradually",w:["undermine","erode","sap","subvert"],f:["Repeated delays began to ______ the public's confidence in the project.","Constant criticism can ______ a child's self-esteem over time."],n:["worsen", "support", "refute", "confirm", "criticize"]},
+{k:"confirm",pos:"v",d:2,m:"to confirm with evidence",w:["corroborate","substantiate","verify","validate"],f:["Two independent witnesses came forward to ______ the defendant's alibi.","Before publishing, the reporter worked to ______ every claim in the leaked memo."],n:["support", "refute", "undermine"]},
+{k:"refute",pos:"v",d:2,m:"to prove wrong",w:["refute","rebut","disprove","debunk"],f:["The physicist designed a new experiment to ______ her rival's claims.","The lawyer rose to ______ each point the prosecutor had made."],n:["criticize", "confirm", "support", "undermine"]},
+{k:"glut",pos:"n",d:2,m:"an excess",w:["plethora","surfeit","glut","superabundance"],f:["The market now offers a ______ of streaming services, far more than any viewer could use.","A ______ of applicants for each opening meant even strong candidates were turned away."],n:["dearth"]},
+{k:"dearth",pos:"n",d:2,m:"a shortage",w:["dearth","paucity","scarcity","shortage"],f:["A ______ of reliable data made it impossible to judge whether the program worked.","The ______ of qualified nurses forced the hospital to close a ward."],n:["glut"]},
+{k:"honesty",pos:"n",d:3,m:"integrity and honesty",w:["probity","integrity","rectitude","uprightness"],f:["The judge's ______ was beyond question; in thirty years no one had accused her of favoritism.","Investors trusted the firm because of its founder's well-known ______."],n:["candor"]},
+{k:"deceit",pos:"n",d:3,m:"trickery or deception",w:["chicanery","duplicity","subterfuge","guile"],f:["The audit uncovered the accountant's ______: forged invoices and secret accounts.","Winning through ______ rather than skill, the swindler fooled even seasoned dealers."]},
+{k:"acumen",pos:"n",d:2,m:"keen insight or judgment",w:["acumen","astuteness","shrewdness","discernment"],f:["Her business ______ was evident in how quickly she spotted which ventures would fail.","It took real political ______ to see that the coalition would collapse before anyone else did."]},
+{k:"hubris",pos:"n",d:2,m:"excessive pride",w:["hubris","arrogance","conceit","presumption"],f:["The general's ______ led him to dismiss his scouts' warnings; he was sure no army could defeat his.","Building the tower without testing the foundation was an act of ______ that ended in collapse."]},
+{k:"apathy",pos:"n",d:1,m:"lack of interest",w:["apathy","indifference","unconcern"],f:["Voter ______ was so widespread that fewer than one in five residents bothered to cast a ballot.","The teacher struggled against her students' ______ toward a subject they considered useless."]},
+{k:"candor",pos:"n",d:2,m:"frankness",w:["candor","frankness","forthrightness","bluntness"],f:["Patients appreciated the doctor's ______; she told them plainly what their test results meant.","The memoir's ______ about the author's failures surprised readers used to polished celebrity stories."],n:["honesty"]}
+];
+function vDistractors(R,c,count){
+  const ok=VCL.filter(x=>x.pos===c.pos&&x.k!==c.k&&!(c.n||[]).includes(x.k)&&!(x.n||[]).includes(c.k));
+  return R.shuffle(ok).slice(0,count).map(x=>R.pick(x.w));
+}
+function makeVerbal(c,key,type){
+  const h=seedOf(key);const R=mkR(h);const frame=R.pick(c.f);const id="gv-"+c.k+"-"+type+"-"+h.toString(36);
+  if(type==="se"){const pair=R.shuffle(c.w).slice(0,2);const opts=R.shuffle([...pair,...vDistractors(R,c,4)]);
+    return{id,s:"verbal",t:"Sentence Equivalence",k:"se",d:c.d,p:frame,o:opts,ans:pair.map(w=>opts.indexOf(w)).sort((a,b)=>a-b),ex:`The clue points to a word meaning "${c.m}". "${pair[0]}" and "${pair[1]}" both mean that and produce sentences alike in meaning; no other pair does.`,gen:true}}
+  const word=R.pick(c.w);const opts=R.shuffle([word,...vDistractors(R,c,4)]);
+  return{id,s:"verbal",t:"Text Completion",k:"tc",d:c.d,p:frame.replace("______","(i)___"),blanks:[opts],ans:[opts.indexOf(word)],ex:`The sentence's clue calls for a word meaning "${c.m}". "${word}" means exactly that; the other choices don't fit the clue.`,gen:true};
+}
+
 /* ============================== STATE ============================== */
 const S={view:"dashboard",db:null,user:null,sample:null,assets:null,uid:null,isOwner:false,me:null,ready:false,
   prog:null,myReq:undefined,grant:undefined,catalog:null,requests:[],grants:{},results:{},board:[],profiles:{},reports:[],myReports:[],
@@ -261,23 +320,25 @@ const passageOf=q=>q.passage||(q.pid&&PASSAGES[q.pid])||null;
 let todayCache={day:null,key:null,pool:[]};
 function todayQuantPool(){const day=dayKey(),key=studentKey();if(todayCache.day!==day||todayCache.key!==key){const pool=[];GENS.forEach((g,i)=>{for(let j=0;j<2;j++)pool.push(...makeGen(g,`${key}|${day}|pool|${g.n}|${j}`))});todayCache={day,key,pool}}return todayCache.pool}
 function allQuant(){return[...todayQuantPool(),...QUESTIONS.filter(q=>q.s==="quant")]}
-function allVerbal(){return[...S.ai.bank,...QUESTIONS.filter(q=>q.s==="verbal")]}
-function qById(id){return QUESTIONS.find(q=>q.id===id)||S.ai.bank.find(q=>q.id===id)||S.prog.errQ[id]||todayQuantPool().find(q=>q.id===id)||(S.lastResult&&S.lastResult.items&&(S.lastResult.items.find(i=>i.q.id===id)||{}).q)||null}
+let vCache={day:null,key:null,pool:[]};
+function todayVerbalPool(){const day=dayKey(),key=studentKey();if(vCache.day!==day||vCache.key!==key){const pool=[];VCL.forEach(c=>{pool.push(makeVerbal(c,`${key}|${day}|v|${c.k}|tc`,"tc"));pool.push(makeVerbal(c,`${key}|${day}|v|${c.k}|se`,"se"))});vCache={day,key,pool}}return vCache.pool}
+function allVerbal(){return[...todayVerbalPool(),...S.ai.bank,...QUESTIONS.filter(q=>q.s==="verbal")]}
+function qById(id){return QUESTIONS.find(q=>q.id===id)||S.ai.bank.find(q=>q.id===id)||S.prog.errQ[id]||todayQuantPool().find(q=>q.id===id)||todayVerbalPool().find(q=>q.id===id)||(S.lastResult&&S.lastResult.items&&(S.lastResult.items.find(i=>i.q.id===id)||{}).q)||null}
 function groupUnits(list){const units=[],map={};list.forEach(q=>{if(q.pid){if(!map[q.pid]){map[q.pid]=[];units.push(map[q.pid])}map[q.pid].push(q)}else units.push([q])});return units}
 function pickVerbal(n,target,R,used){
   const seen=new Set(S.prog.seen);const all=allVerbal().filter(q=>!used.has(q.id));
-  const today=dayKey();const score=q=>(seen.has(q.id)?8:0)+(target?Math.abs(q.d-target):0)+(q.ai&&q.day===today?-2:0)+R.f()*1.8;
+  const today=dayKey();const score=q=>(seen.has(q.id)?8:0)+(target?Math.abs(q.d-target):0)+(q.ai&&q.day===today?-2:0)+(q.gen?-3:0)+R.f()*1.8;
   const groups=groupUnits(all.filter(q=>q.pid)).map(g=>({g,s:g.reduce((a,q)=>a+score(q),0)/g.length})).sort((a,b)=>a.s-b.s).map(x=>x.g);
   const singles=all.filter(q=>!q.pid).map(q=>({q,s:score(q)})).sort((a,b)=>a.s-b.s).map(x=>x.q);
-  const rc=[],rcTarget=Math.round(n*0.45);
-  for(const g of groups){if(rc.length>=rcTarget)break;if(rc.length+g.length<=rcTarget+1)rc.push(g)}
-  const rcCount=rc.reduce((a,g)=>a+g.length,0);
+  const rc=[],rcTarget=Math.round(n*0.4);let rcN=0;
+  for(const g of groups){if(rcN>=rcTarget)break;if(rcN+g.length<=rcTarget+1){rc.push(g);rcN+=g.length}}
+  const rcCount=rcN;
   const tc=[],se=[];for(const q of singles){if(tc.length+se.length>=n-rcCount)break;(q.t==="Text Completion"?tc:se).push(q)}
   let out=[...tc.sort((a,b)=>(a.blanks?a.blanks.length:1)-(b.blanks?b.blanks.length:1)),...(rc[0]||[]),...se,...rc.slice(1).flat()];
   for(const g of groups){if(out.length>=n)break;if(out.includes(g[0]))continue;out.push(...g.slice(0,n-out.length))}
   return out.slice(0,n);
 }
-function markSeen(qs){const p=S.prog;const set=new Set(p.seen);qs.forEach(q=>{if(!q.gen)set.add(q.id)});p.seen=[...set].slice(-900)}
+function markSeen(qs){const p=S.prog;const set=new Set(p.seen);qs.forEach(q=>{if(!(q.gen&&q.s==="quant"))set.add(q.id)});p.seen=[...set].slice(-900)}
 function dailyMix(){
   const key=studentKey(),day=dayKey();const R=mkR(seedOf(key+"|"+day+"|mix"));
   const quant=genQuant(key+"|"+day+"|daily",20,0,true);
@@ -384,7 +445,7 @@ async function boot(){
   const [db,user,sample,assets,room]=await Promise.all([get("db"),get("user"),get("sample"),get("assets"),get("room")]);
   Object.assign(S,{db,user,sample,assets,room});
   if(user){S.me=await user.me();S.uid=S.me.id;S.isOwner=S.me.isOwner}
-  S.ready=true;todayCache.day=null;
+  S.ready=true;todayCache.day=null;vCache.day=null;
   if(room){try{room.onPeers(ch=>{S.peers=ch.peers.filter(p=>p.kind==="viewer");resolveNames(S.peers.map(p=>p.by||(p.presence&&p.presence.uid)).filter(Boolean));updatePresenceUI()},()=>{});setPresence()}catch(e){}}
   if(db&&S.uid){
     try{const snap=await db.doc("results/"+S.uid).get();
@@ -420,8 +481,8 @@ function nameOf(id,fallback){const p=S.profiles[id];return (p&&p.name)||fallback
 function rerenderIf(views){if(S.exam)return;const ae=document.activeElement;if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)&&$("#main").contains(ae))return;if(views.includes(S.view)&&!(S.view==="practice"&&S.session)&&!(S.view==="writing"&&S.essay.start))render()}
 
 /* ============================== ROUTING / SHELL ============================== */
-const VIEWS=[["dashboard","Dashboard","01"],["practice","Practice","02"],["mock","GRE Test","03"],["writing","Writing","04"],["vocab","Vocabulary","05"],["calendar","Study Calendar","06"],["tools","Study Tools","07"],["messages","Messages","08"],["library","Library","09"]];
-function route(){const h=(location.hash||"").slice(1);const ok=VIEWS.map(v=>v[0]).concat(["admin"]);S.view=ok.includes(h)?h:"dashboard";renderNav();render();setPresence()}
+const VIEWS=[["dashboard","Dashboard","01"],["practice","Practice","02"],["mock","GRE Test","03"],["writing","Writing","04"],["vocab","Vocabulary","05"],["calendar","Study Calendar","06"],["tools","Study Tools","07"],["messages","Messages","08"],["library","Library","09"]].filter(v=>!PUB||!["messages","library"].includes(v[0]));
+function route(){const h=(location.hash||"").slice(1);const ok=VIEWS.map(v=>v[0]).concat(PUB?[]:["admin"]);S.view=ok.includes(h)?h:"dashboard";renderNav();render();setPresence()}
 window.addEventListener("hashchange",route);
 function go(v){if(location.hash!=="#"+v)location.hash=v;else route();window.scrollTo(0,0)}
 function reqStatus(r){const g=S.grants[r.id];if(!g)return "pending";if(g.status==="approved")return "approved";return (r.at||0)>(g.at||0)?"pending":g.status}
@@ -435,7 +496,7 @@ function renderNav(){
 function renderWho(){
   const w=$("#who");if(!w)return;
   if(!S.ready){w.innerHTML=`<span class="muted">Connecting…</span>`;return}
-  if(!S.me||!S.uid){w.innerHTML=`<span class="muted">Progress saves on this device only. Sign in to sync.</span>`;return}
+  if(!S.me||!S.uid){w.innerHTML=PUB?`<span class="muted">Free GRE practice. Your progress is saved on this device. New questions every day.</span>`:`<span class="muted">Progress saves on this device only. Sign in to sync.</span>`;return}
   w.innerHTML=`<img src="${esc(S.me.avatarUrl)}" alt=""><div><b>${esc(S.prog.profile.alias||S.me.name||"You")}</b><div class="muted" style="font-size:11.5px">${S.isOwner?"Portal admin":S.writeBlocked?"View-only access":"Student"}</div></div>`;
 }
 
@@ -480,7 +541,7 @@ function vDashboard(){
   const greet=S.me&&S.me.name?S.me.name.split(" ")[0]:"there";
   const board=S.board.slice().sort((a,b)=>(b.xp||0)-(a.xp||0)).slice(0,8);
   const d40=p.d40[today];
-  const aiLine=S.ai.state==="loading"?`<span class="pill wait">Writing</span> AI is writing today's verbal questions for you…`:S.ai.state==="ready"?`<span class="pill ok">AI</span> ${aiTodayCount()} verbal questions written only for you today`:S.ai.state==="error"?`<span class="pill no">AI</span> ${esc(S.ai.msg)} <button class="btn sm ghost" data-act="aiGen">Try again</button>`:S.sample?`<button class="btn sm gold" data-act="aiGen">Have AI write today's verbal questions</button>`:`<span class="muted">Verbal questions come from the question bank.</span>`;
+  const aiLine=PUB?`<span class="pill ok">New</span> Fresh questions are ready for you today.`:S.ai.state==="loading"?`<span class="pill wait">Writing</span> AI is writing today's verbal questions for you…`:S.ai.state==="ready"?`<span class="pill ok">AI</span> ${aiTodayCount()} verbal questions written only for you today`:S.ai.state==="error"?`<span class="pill no">AI</span> ${esc(S.ai.msg)} <button class="btn sm ghost" data-act="aiGen">Try again</button>`:S.sample?`<button class="btn sm gold" data-act="aiGen">Have AI write today's verbal questions</button>`:`<span class="muted">Verbal questions come from the question bank.</span>`;
   const mixDots=d40?`<div class="mix">${Array.from({length:d40.n},(_,i)=>`<i class="${i<d40.q?"q":"v"} done"></i>`).join("")}</div>`:`<div class="mix">${Array.from({length:40},(_,i)=>`<i class="${i%2?"v":"q"}"></i>`).join("")}</div>`;
   const libBanner=!S.isOwner&&S.uid&&S.db&&S.grant!==undefined&&!(S.grant&&S.grant.status==="approved")?`<div class="banner"><b>Library access</b><span>${S.myReq&&reqStatusSelf()==="pending"?"Your request is waiting for approval.":"Request access to the study library to read the books."}</span><a class="btn sm gold" href="#library" data-act="nav" data-v="library">Open library</a></div>`:"";
   return `
@@ -488,7 +549,7 @@ function vDashboard(){
   <div class="row"><span id="onlineCount"></span><a class="btn ghost" href="#mock" data-act="nav" data-v="mock">Take a full GRE test</a></div></div>
   ${S.isOwner?ownerPanel():""}${libBanner}
   <div class="hero"><div class="l"><span class="eyebrow">Today's 40</span><h2>${d40?`Done today: ${d40.c} of ${d40.n} correct`:"A fresh 40-question mixed set, made for you"}</h2>
-    <p class="muted">Quant numbers are generated for you alone and change every day, so no two students get the same set. Verbal mixes AI-written items with the bank, avoiding questions you've already seen.</p>
+    <p class="muted">Every question changes daily. Quant problems and Verbal text completions and sentence equivalences are generated for you alone each day, so no two students get the same set. ${PUB?"Reading passages rotate so you always see unread ones first.":"Reading passages rotate through the bank and AI-written sets, avoiding ones you've already seen."}</p>
     ${mixDots}<div class="row" style="font-size:13px">${aiLine}</div>
     <div class="row"><button class="btn gold" data-act="daily40">${d40?"Take it again":"Start today's 40"}</button><span class="muted" style="font-size:12.5px">≈ ${Math.round((20*105+20*90)/60)} min at GRE pace · resets at midnight</span></div></div>
     <div class="r"><span class="eyebrow" style="color:inherit;opacity:.7">${days===null?"Test day":"Days to test day"}</span><span class="big mono">${days===null?"—":days<0?"Done":days}</span><span style="opacity:.8;font-size:13px">${days===null?"Set your test date in your study profile below.":"Streak "+(p.streak||0)+" days · "+p.xp+" XP"}</span></div></div>
@@ -510,7 +571,7 @@ function vDashboard(){
     <div class="sheet stack"><h2>Accuracy by topic</h2>
       ${["quant","verbal"].map(sec=>`<div class="eyebrow" style="margin-top:6px">${sec==="quant"?"Quantitative":"Verbal"}</div>`+TOPICS[sec].map(t=>{const x=p.topic[t]||{c:0,t:0},a=pct(x.c,x.t);return `<div class="stack" style="gap:4px"><div class="row" style="justify-content:space-between;font-size:13.5px"><span>${t}</span><span class="mono muted">${x.t?a+"% · "+x.c+"/"+x.t:"not started"}</span></div><div class="bar ${x.t?(a>=75?"g":a>=50?"w":"b"):""}"><i style="width:${x.t?a:0}%"></i></div></div>`}).join("")).join("")}
     </div>
-    <div class="sheet stack"><h2>Leaderboard</h2>${board.length?`<div class="lb"><ol>${board.map((b,i)=>`<li><span class="mono muted" style="width:20px">${i+1}</span><img src="${esc((S.profiles[b.id]||{}).avatarUrl||"")}" alt=""><span style="flex:1">${esc(b.alias||nameOf(b.id))}${b.id===S.uid?" <span class='pill neu'>you</span>":""}</span><span class="mono">${b.xp||0} XP</span></li>`).join("")}</ol></div>`:`<div class="empty">Rankings appear once students start practicing. Every correct answer earns 10 XP.</div>`}</div>
+    ${PUB?bestsHTML():`<div class="sheet stack"><h2>Leaderboard</h2>${board.length?`<div class="lb"><ol>${board.map((b,i)=>`<li><span class="mono muted" style="width:20px">${i+1}</span><img src="${esc((S.profiles[b.id]||{}).avatarUrl||"")}" alt=""><span style="flex:1">${esc(b.alias||nameOf(b.id))}${b.id===S.uid?" <span class='pill neu'>you</span>":""}</span><span class="mono">${b.xp||0} XP</span></li>`).join("")}</ol></div>`:`<div class="empty">Rankings appear once students start practicing. Every correct answer earns 10 XP.</div>`}</div>`}
   </div>
   <div class="sheet stack"><h2>Your study profile</h2>
     <div class="grid g4">
@@ -524,6 +585,8 @@ function vDashboard(){
   ${p.attempts.length?`<div class="sheet stack"><h2>Recent sessions</h2><div class="tablebox"><table><thead><tr><th>Date</th><th>Mode</th><th>Section</th><th>Score</th><th>Time</th></tr></thead><tbody>${p.attempts.slice(-8).reverse().map(a=>`<tr><td>${fmtDate(a.at)}</td><td>${esc(a.mode)}</td><td>${esc(a.sec)}</td><td class="mono">${a.c}/${a.n} · ${pct(a.c,a.n)}%</td><td class="mono">${fmt(a.secs)}</td></tr>`).join("")}</tbody></table></div></div>`:""}`;
 }
 
+function bestsHTML(){const p=S.prog;const m=p.mocks.filter(x=>x.q!=null||x.v!=null);const bq=Math.max(0,...m.map(x=>x.q||0)),bv=Math.max(0,...m.map(x=>x.v||0));const bw=Math.max(0,...p.essays.map(e=>e.score||0));const d40=Object.values(p.d40);const best40=d40.length?Math.max(...d40.map(x=>x.c)):0;const done40=d40.length;
+  return `<div class="sheet stack"><h2>Personal bests</h2><div class="grid g2">${[["Best Quant",bq||"—","on a GRE test"],["Best Verbal",bv||"—","on a GRE test"],["Best essay",bw||"—","out of 6"],["Best Today's 40",best40?best40+"/40":"—",done40+" day"+(done40===1?"":"s")+" completed"]].map(([l,v,s])=>`<div class="stat"><div class="n mono">${v}</div><div class="l"><b>${l}</b> · ${s}</div></div>`).join("")}</div><p class="muted" style="font-size:13px">Come back each day: Today's 40 and your practice questions are new every morning.</p></div>`}
 /* ---------- Practice ---------- */
 function vPractice(){
   if(S.session)return vRunner();
@@ -544,7 +607,7 @@ function vPractice(){
   <div class="sheet stack"><h2>Where questions come from</h2>
     <div class="stack" style="gap:10px;font-size:14px">
       <div><b>Quant:</b> ${GENS.length} question generators build new problems with fresh numbers for each student, every day. They cover arithmetic, algebra, geometry, data analysis, comparisons, select-all, numeric entry and data-interpretation tables. Answers are computed, so the key is always right.</div>
-      <div><b>Verbal:</b> ${S.ai.bank.length} AI-written items in your personal bank (${aiTodayCount()} from today), checked by a second AI pass that answers them on its own. Plus ${QUESTIONS.filter(q=>q.s==="verbal").length} hand-written bank questions. Questions you've already seen are used last.</div>
+      <div><b>Verbal:</b> ${VCL.length*2} text completion and sentence equivalence questions generated for you each day from ${VCL.length} meaning groups (${VCL.reduce((a,c)=>a+c.w.length,0)} words, ${VCL.reduce((a,c)=>a+c.f.length,0)} sentences), so they change daily. ${PUB?"Plus":`Plus ${S.ai.bank.length} AI-written items in your personal bank (${aiTodayCount()} from today), checked by a second AI pass that answers them on its own. Plus`} ${QUESTIONS.filter(q=>q.s==="verbal").length} hand-written bank questions. Questions you've already seen are used last.</div>
       <div><b>Marking:</b> all-or-nothing, as on the real test. Misses go to your error log, then drop off once you get them right.</div>
       <div class="muted" style="font-size:13px">Keyboard: <span class="kbd">A</span>–<span class="kbd">E</span> choose · <span class="kbd">N</span> next · <span class="kbd">B</span> back · <span class="kbd">M</span> mark</div>
     </div>
@@ -987,7 +1050,7 @@ function vLibrary(){
   const head=`<div class="head"><div><div class="eyebrow">Study library</div><h1>Books & resources</h1><p>The library opens once the portal admin approves your request. Approved students can read every resource listed here.</p></div>${S.isOwner?`<a class="btn" href="#admin" data-act="nav" data-v="admin">Manage library</a>`:""}</div>`;
   if(!S.ready)return head+`<div class="empty">Loading the library…</div>`;
   if(S.isOwner){const books=S.catalog||[];return head+`<div class="banner"><b>Admin view</b><span>You see the library the way approved students do. ${pendingCount()} request(s) waiting.</span></div>`+(books.length?`<div class="grid g3">${books.map(b=>bookCard(b,true)).join("")}</div>`:`<div class="empty">No resources yet. Add books, notes or links from the Admin Desk.</div>`)}
-  if(!S.db||!S.uid)return head+`<div class="sheet stack" style="max-width:640px"><h2>Library access</h2><p>Book requests and approvals run on the ALFREDO GRE PORTAL members site. Open it, sign in, and send your request there. The admin approves every request.</p><div class="row"><a class="btn gold" href="${MEMBERS_URL}" target="_blank" rel="noopener">Open the members site ↗</a></div></div>`;
+  if(!S.db||!S.uid)return head+`<div class="empty">Sign in to claude.ai and open this portal from its link to request library access.</div>`;
   if(S.grant===undefined||S.myReq===undefined)return head+`<div class="empty">Checking your access…</div>`;
   const st=reqStatusSelf();
   if(st==="approved"){const books=S.grant.books||[];return head+`<div class="banner" style="background:var(--good-soft);color:var(--good)"><b>Access approved</b><span>Approved on ${fmtDate(S.grant.at)}.</span></div>`+(books.length?`<div class="grid g3">${books.map(b=>bookCard(b,true)).join("")}</div>`:`<div class="empty">You're approved. Resources will appear here as the admin adds them.</div>`)}

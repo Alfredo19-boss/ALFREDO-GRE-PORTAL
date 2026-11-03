@@ -1,0 +1,15 @@
+{
+  "name": "ALFREDO GRE PORTAL",
+  "short_name": "ALFREDO GRE",
+  "description": "Free GRE practice with new questions every day, a full-length test in the real GRE format, a study calendar and vocabulary flashcards.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f4ee",
+  "theme_color": "#17233f",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
