@@ -2,7 +2,7 @@
 
 A free GRE preparation platform that runs entirely in the browser.
 
-**Live site:** https://alfredo.github.io/alfredo-gre-portal/
+**Live site:** https://princekk122.github.io/alfredo-gre-portal/
 
 ## Features
 
@@ -13,13 +13,21 @@ A free GRE preparation platform that runs entirely in the browser.
 - **Marked results** — every answer scored with an explanation, topic breakdown and pacing feedback.
 - **Vocabulary** — 140 high-frequency GRE words with spaced-repetition flashcards and quizzes.
 - **Study tools** — formula sheet, GRE-style calculator, week-by-week study planner.
+- **Study calendar** — plan sessions by day, auto-fill a plan up to test day, tick sessions off, and download the plan to Google or Apple Calendar (.ics).
 - **Dashboard** — streak, XP, score estimates on the 130–170 scale, accuracy by topic, daily plan.
 
 ## How data is stored
 
 This GitHub Pages version keeps each student's progress in their own browser (localStorage). Nothing is sent to a server.
 
-The members version (book library with admin approval, leaderboard, AI-written verbal questions, AI essay scoring and AI tutor) runs at the ALFREDO GRE PORTAL members site linked from the Library tab.
+The members version (book library with admin approval, direct messages with the admin, live "who's online", leaderboard, AI-written verbal questions, AI essay scoring and AI tutor) runs at the ALFREDO GRE PORTAL members site linked from the Library tab.
+
+## Files
+
+- `index.html` — the page structure
+- `styles.css` — all styling (light and dark themes, exam screen)
+- `app.js` — all logic and question content
+- `README.md` — this description
 
 ## Run locally
 
