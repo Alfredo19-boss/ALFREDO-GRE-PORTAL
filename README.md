@@ -2,7 +2,7 @@
 
 Free GRE practice that anyone can use in the browser. No account or sign-in needed.
 
-**Live site:** https://princekk122.github.io/alfredo-gre-portal/
+**Live site:** https://alfredo.github.io/alfredo-gre-portal/
 
 ## Features
 
