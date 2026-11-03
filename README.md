@@ -2,7 +2,7 @@
 
 A free GRE preparation platform that runs entirely in the browser.
 
-**Live site:** https://princekk122.github.io/alfredo-gre-portal/
+**Live site:** https://alfredo.github.io/alfredo-gre-portal/
 
 ## Features
 
