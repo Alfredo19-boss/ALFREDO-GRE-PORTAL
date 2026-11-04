@@ -417,6 +417,90 @@ if(typeof PUBLIC_SITE!=="undefined"){
 }
 function scoreRange(est){return est==null?"—":Math.max(130,est-3)+"–"+Math.min(170,est+3)}
 
+/* ============================== SIGN-IN (public site, Firebase) ============================== */
+const FB={auth:null,db:null,user:null,mode:"signin",busy:false,msg:"",ok:"",state:"loading",saving:null};
+const progKey=()=>FB.user?"alfredo.prog."+FB.user.uid:"alfredo.prog";
+function fbConfigured(){const c=window.ALFREDO_FIREBASE;return !!(c&&c.apiKey&&c.projectId&&!/PASTE/i.test(c.apiKey+c.projectId+(c.appId||"")))}
+function startAuthGate(){
+  document.body.classList.add("locked");FB.state="loading";renderAuth();
+  if(!fbConfigured()){FB.state="setup";renderAuth();return}
+  if(!window.firebase||!firebase.auth){FB.state="offline";renderAuth();return}
+  try{if(!firebase.apps.length)firebase.initializeApp(window.ALFREDO_FIREBASE);FB.auth=firebase.auth();FB.db=firebase.firestore()}catch(e){FB.state="setup";renderAuth();return}
+  FB.auth.getRedirectResult().catch(e=>{FB.msg=authError(e);FB.state="form";renderAuth()});
+  FB.auth.onAuthStateChanged(u=>{if(u)enterPortal(u);else{FB.user=null;FB.state="form";document.body.classList.add("locked");renderAuth()}});
+}
+function authError(e){const c=(e&&e.code)||"";return({
+  "auth/invalid-email":"That email address doesn't look right.",
+  "auth/user-not-found":"Email or password is incorrect.","auth/wrong-password":"Email or password is incorrect.","auth/invalid-credential":"Email or password is incorrect.","auth/invalid-login-credentials":"Email or password is incorrect.",
+  "auth/email-already-in-use":"An account with this email already exists. Sign in instead.",
+  "auth/weak-password":"Use a password with at least 6 characters.",
+  "auth/missing-password":"Enter your password.",
+  "auth/popup-closed-by-user":"","auth/cancelled-popup-request":"",
+  "auth/unauthorized-domain":"This website isn't approved for sign-in yet. Admin: add it in Firebase under Authentication → Settings → Authorized domains.",
+  "auth/operation-not-allowed":"This sign-in method isn't switched on yet. Admin: enable it in Firebase under Authentication → Sign-in method.",
+  "auth/network-request-failed":"No connection. Check your internet and try again.",
+  "auth/too-many-requests":"Too many attempts. Wait a few minutes and try again."})[c]??"Sign-in didn't work. Please try again."}
+function renderAuth(){
+  const h=document.getElementById("authHost");if(!h)return;
+  if(FB.user){h.innerHTML="";return}
+  const brand=`<div class="authbrand"><img src="favicon.svg" alt="" width="52" height="52"><div><b>ALFREDO GRE PORTAL</b><span>Free GRE practice · new questions every day</span></div></div>`;
+  const side=`<aside class="authside"><span class="eyebrow" style="color:inherit;opacity:.75">What's inside</span><ul><li>Today's 40: a fresh mixed set made for you every day</li><li>Full-length GRE test in the real format, with adaptive sections</li><li>Marked practice with explanations and an error log</li><li>Study calendar, vocabulary flashcards, formula sheet</li><li>Your progress saved to your account on every device</li></ul></aside>`;
+  let card;
+  if(FB.state==="loading")card=`${brand}<p class="muted">Checking your sign-in…</p>`;
+  else if(FB.state==="setup")card=`${brand}<h2>Sign-in is being set up</h2><p>The portal will open here as soon as sign-in is ready. Please check back soon.</p><p class="muted" style="font-size:13px">Admin: paste your Firebase settings into <code>firebase-config.js</code> and upload it.</p>`;
+  else if(FB.state==="offline")card=`${brand}<h2>Can't reach the sign-in service</h2><p>Check your internet connection, then reload the page.</p><button class="btn gold" onclick="location.reload()">Reload</button>`;
+  else{const su=FB.mode==="signup",fp=FB.mode==="forgot";
+    card=`${brand}
+    <div class="authtabs" role="tablist"><button role="tab" class="${!su&&!fp?"on":""}" data-act="authTab" data-v="signin">Sign in</button><button role="tab" class="${su?"on":""}" data-act="authTab" data-v="signup">Create account</button></div>
+    ${fp?"":`<button class="btn ghost authgoogle" data-act="authGoogle" ${FB.busy?"disabled":""}>Continue with Google</button><div class="author"><span>or use email</span></div>`}
+    <form id="authForm" class="stack" style="gap:10px" novalidate>
+      ${fp?`<p style="font-size:14px">Enter your email and we'll send you a link to reset your password.</p>`:""}
+      ${su?`<label class="f">Full name<input type="text" id="auName" autocomplete="name" maxlength="60" required value="${esc(FB.name||"")}"></label>`:""}
+      <label class="f">Email<input type="email" id="auEmail" autocomplete="email" maxlength="120" required value="${esc(FB.email||"")}"></label>
+      ${fp?"":`<label class="f">Password<input type="password" id="auPass" autocomplete="${su?"new-password":"current-password"}" minlength="6" required></label>`}
+      ${FB.msg?`<div class="authmsg bad" role="alert">${esc(FB.msg)}</div>`:""}${FB.ok?`<div class="authmsg good" role="status">${esc(FB.ok)}</div>`:""}
+      <button class="btn gold" type="submit" style="justify-content:center" ${FB.busy?"disabled":""}>${FB.busy?"Please wait…":fp?"Send reset link":su?"Create my account":"Sign in"}</button>
+    </form>
+    <div class="row" style="justify-content:space-between;font-size:13px">${fp?`<button class="linkbtn" data-act="authTab" data-v="signin">Back to sign in</button>`:su?`<span class="muted">At least 6 characters for your password.</span>`:`<button class="linkbtn" data-act="authTab" data-v="forgot">Forgot password?</button>`}</div>`}
+  h.innerHTML=`<div class="auth"><div class="authwrap"><div class="authcard">${card}</div>${side}</div></div>`;
+}
+async function authGoogle(){FB.msg="";FB.ok="";FB.busy=true;renderAuth();const pr=new firebase.auth.GoogleAuthProvider();
+  try{await FB.auth.signInWithPopup(pr)}catch(e){if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment"].includes(e.code)){try{await FB.auth.signInWithRedirect(pr);return}catch(e2){FB.msg=authError(e2)}}else FB.msg=authError(e)}
+  FB.busy=false;if(!FB.user)renderAuth()}
+async function authSubmit(){
+  const v=id=>((document.getElementById(id)||{}).value||"").trim();const email=v("auEmail"),pass=(document.getElementById("auPass")||{}).value||"";FB.email=email;if(document.getElementById("auName"))FB.name=v("auName");
+  FB.msg="";FB.ok="";
+  if(!/^\S+@\S+\.\S+$/.test(email)){FB.msg="Enter a valid email address.";renderAuth();return}
+  if(FB.mode==="signup"&&!v("auName")){FB.msg="Enter your full name.";renderAuth();return}
+  FB.busy=true;renderAuth();
+  try{
+    if(FB.mode==="forgot"){await FB.auth.sendPasswordResetEmail(email);FB.ok="Check your inbox for a link to reset your password.";FB.mode="signin"}
+    else if(FB.mode==="signup"){const cr=await FB.auth.createUserWithEmailAndPassword(email,pass);await cr.user.updateProfile({displayName:v("auName").slice(0,60)});try{await cr.user.sendEmailVerification()}catch(e){}if(FB.user){S.me.name=cr.user.displayName;renderWho();render()}}
+    else await FB.auth.signInWithEmailAndPassword(email,pass);
+  }catch(e){FB.msg=authError(e)}
+  FB.busy=false;if(!FB.user)renderAuth();
+}
+async function enterPortal(u){
+  FB.user=u;S.uid=u.uid;S.me={id:u.uid,name:u.displayName||(u.email||"").split("@")[0],avatarUrl:u.photoURL||"",isOwner:false};
+  let local=lsGet(progKey());if(!local&&!lsGet("alfredo.migrated")){local=lsGet("alfredo.prog");lsSet("alfredo.migrated",true)}
+  S.prog=normProg(local);
+  try{const snap=await FB.db.collection("students").doc(u.uid).get();
+    if(snap.exists&&snap.data().prog){const remote=normProg(JSON.parse(snap.data().prog));if((remote.xp||0)>=(S.prog.xp||0))S.prog=remote}
+  }catch(e){}
+  lsSet(progKey(),S.prog);todayCache.day=null;vCache.day=null;S.ready=true;S.ai.state="off";
+  document.body.classList.remove("locked");renderAuth();renderWho();renderNav();render();pushProgFB();
+}
+let fbTimer=null;
+function pushProgFB(){
+  if(!FB.db||!FB.user)return;if(FB.saving){FB.saving.then(()=>pushProgFB());return}
+  const p=S.prog,u=FB.user;let body=JSON.parse(JSON.stringify(p));let str=JSON.stringify(body);
+  if(str.length>800000){body.errQ={};body.seen=body.seen.slice(-300);body.essays=body.essays.map(e=>Object.assign({},e,{text:""}));str=JSON.stringify(body)}
+  const st=overall(p);
+  FB.saving=FB.db.collection("students").doc(u.uid).set({prog:str,name:S.me.name||"",email:u.email||"",xp:p.xp||0,answered:st.t,accuracy:st.acc,streak:p.streak||0,testDate:p.profile.testDate||"",updatedAt:Date.now()})
+    .catch(()=>{}).finally(()=>{FB.saving=null});
+}
+function signOut(){if(!FB.auth)return;pushProgFB();(FB.saving||Promise.resolve()).then(()=>FB.auth.signOut()).then(()=>location.reload())}
+
 /* ============================== STATE ============================== */
 const S={view:"dashboard",db:null,user:null,sample:null,assets:null,uid:null,isOwner:false,me:null,ready:false,
   prog:null,myReq:undefined,grant:undefined,catalog:null,requests:[],grants:{},results:{},board:[],profiles:{},reports:[],myReports:[],
@@ -477,7 +561,7 @@ function dailyMix(){
 
 /* ============================== PERSISTENCE ============================== */
 let saveTimer=null;
-function saveProg(){lsSet("alfredo.prog",S.prog);clearTimeout(saveTimer);saveTimer=setTimeout(pushProg,900)}
+function saveProg(){lsSet(progKey(),S.prog);clearTimeout(saveTimer);saveTimer=setTimeout(()=>{pushProg();pushProgFB()},900)}
 async function pushProg(){
   if(!S.db||!S.uid||S.writeBlocked)return;
   if(S.saving){S.saving.then(()=>pushProg());return}
@@ -569,6 +653,7 @@ const aiTodayCount=()=>S.ai.bank.filter(q=>q.day===dayKey()).length;
 /* ============================== PLATFORM ============================== */
 async function boot(){
   route();
+  if(PUB){startAuthGate();return}
   if(!window.claude||!window.claude.use){S.ready=true;S.ai.state="off";await loadAiBank();renderWho();render();return}
   const get=n=>window.claude.use(n).catch(()=>null);
   const [db,user,sample,assets,room,downloads]=await Promise.all([get("db"),get("user"),get("sample"),get("assets"),get("room"),get("downloads")]);
@@ -624,6 +709,7 @@ function renderNav(){
 }
 function renderWho(){
   const w=$("#who");if(!w)return;
+  if(FB.user){const nm=S.prog.profile.alias||S.me.name||"Student";w.innerHTML=`${S.me.avatarUrl?`<img src="${esc(S.me.avatarUrl)}" alt="">`:`<span class="initials">${esc(nm.split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase())}</span>`}<div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</b><button class="linkbtn" data-act="signOut">Sign out</button></div>`;return}
   if(!S.ready){w.innerHTML=`<span class="muted">Connecting…</span>`;return}
   if(!S.me||!S.uid){w.innerHTML=PUB?`<span class="muted">Free GRE practice. Your progress is saved on this device. New questions every day.</span>`:`<span class="muted">Progress saves on this device only. Sign in to sync.</span>`;return}
   w.innerHTML=`<img src="${esc(S.me.avatarUrl)}" alt=""><div><b>${esc(S.prog.profile.alias||S.me.name||"You")}</b><div class="muted" style="font-size:11.5px">${S.isOwner?"Portal admin":S.writeBlocked?"View-only access":"Student"}</div></div>`;
@@ -709,7 +795,7 @@ function vDashboard(){
       <label class="f">Target Quant<input type="number" id="pf-q" min="130" max="170" value="${p.profile.targetQ}"></label>
       <label class="f">Target Verbal<input type="number" id="pf-v" min="130" max="170" value="${p.profile.targetV}"></label>
     </div>
-    <div class="row"><button class="btn" data-act="saveProfile">Save profile</button><span class="muted" style="font-size:13px">${S.uid&&S.db&&!S.writeBlocked?"Saved to your account.":"Saved on this device."}</span></div>
+    <div class="row"><button class="btn" data-act="saveProfile">Save profile</button><span class="muted" style="font-size:13px">${(S.uid&&S.db&&!S.writeBlocked)||FB.user?"Saved to your account.":"Saved on this device."}</span></div>
   </div>
   ${p.attempts.length?`<div class="sheet stack"><h2>Recent sessions</h2><div class="tablebox"><table><thead><tr><th>Date</th><th>Mode</th><th>Section</th><th>Score</th><th>Time</th></tr></thead><tbody>${p.attempts.slice(-8).reverse().map(a=>`<tr><td>${fmtDate(a.at)}</td><td>${esc(a.mode)}</td><td>${esc(a.sec)}</td><td class="mono">${a.c}/${a.n} · ${pct(a.c,a.n)}%</td><td class="mono">${fmt(a.secs)}</td></tr>`).join("")}</tbody></table></div></div>`:""}`;
 }
@@ -1131,7 +1217,7 @@ function vTools(){
   <div class="sheet stack"><div class="row" style="justify-content:space-between"><h2>Study planner</h2><div class="row"><label class="f" style="flex-direction:row;align-items:center;gap:8px">Hours per week<input type="number" id="pl-hours" min="2" max="40" value="${p.hours}" style="width:80px"></label><label class="f" style="flex-direction:row;align-items:center;gap:8px">Test date<input type="date" id="pl-date" value="${esc(p.testDate)}" style="width:170px"></label><button class="btn sm" data-act="savePlan">Update plan</button></div></div>
   <p class="muted" style="font-size:13.5px">${days&&days>0?`${weeks} week${weeks>1?"s":""} until test day. `:"No test date set, so this shows a 6-week plan. "}Weak topics come first and the order changes as your accuracy changes.</p>
   <div class="grid g3">${plan.map(x=>`<div class="sheet stack" style="background:var(--paper);gap:8px"><div class="row" style="justify-content:space-between"><b>Week ${x.w}</b><span class="pill ${x.phase==="Final week"?"wait":x.phase==="Foundations"?"neu":"ok"}">${x.phase}</span></div><ul style="margin:0;padding-left:18px;font-size:13.5px">${x.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>`).join("")}</div></div>
-  <div class="sheet stack"><h2>Your progress</h2><p class="muted" style="font-size:13.5px">${S.uid&&S.db?"Your progress is saved to your account. You can also keep a backup file.":"Your progress is saved in this browser. Make a backup file to move it to another device or keep it safe if you clear your browser."}</p>
+  <div class="sheet stack"><h2>Your progress</h2><p class="muted" style="font-size:13.5px">${FB.user?`Signed in as <b>${esc(FB.user.email||S.me.name)}</b>. Your progress is saved to your account and follows you to any device. <button class="linkbtn" data-act="signOut">Sign out</button>`:S.uid&&S.db?"Your progress is saved to your account. You can also keep a backup file.":"Your progress is saved in this browser. Make a backup file to move it to another device or keep it safe if you clear your browser."}</p>
   <div class="row"><button class="btn" data-act="backup">Back up my progress</button><label class="btn ghost" style="cursor:pointer">Restore from a backup<input type="file" id="restoreFile" accept=".json,application/json" hidden></label>${installEvt?`<button class="btn gold" data-act="install">Install the app</button>`:""}</div>
   ${typeof PUBLIC_SITE!=="undefined"?`<p class="muted" style="font-size:12.5px">Tip: add this site to your home screen to open it like an app. It keeps working offline once loaded.</p>`:""}</div>
   <div class="grid g2">${FORMULAS.map(([h,rows])=>`<div class="sheet formula"><h3>${h}</h3><dl>${rows.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></div>`).join("")}
@@ -1498,6 +1584,9 @@ document.addEventListener("click",e=>{
     case "rmBook":{const b=(S.catalog||[]).slice();b.splice(+d.i,1);writeCatalog(b);toast("Removed");break}
     case "dismissReport":dismissReport(d.u,+d.i);break;
     case "backup":backupProgress();break;
+    case "authTab":FB.mode=d.v;FB.msg="";if(d.v!=="signin")FB.ok="";renderAuth();break;
+    case "authGoogle":authGoogle();break;
+    case "signOut":signOut();break;
     case "install":if(installEvt){installEvt.prompt();installEvt=null;render()}break;
     case "sendMsg":sendMsg();break;
     case "openThread":openThread(d.id);break;
@@ -1514,6 +1603,7 @@ document.addEventListener("click",e=>{
     case "calIcs":exportICS();break;
   }
 });
+document.addEventListener("submit",e=>{if(e.target.id==="authForm"){e.preventDefault();authSubmit()}});
 document.addEventListener("change",e=>{if(e.target.id==="restoreFile"&&e.target.files&&e.target.files[0]){restoreProgress(e.target.files[0]);e.target.value=""}});
 document.addEventListener("input",e=>{
   const t=e.target;

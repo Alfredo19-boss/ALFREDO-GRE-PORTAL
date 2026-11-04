@@ -1,8 +1,8 @@
 # ALFREDO GRE PORTAL
 
-Free GRE practice that anyone can use in the browser. No account or sign-in needed.
+Free GRE practice in the browser. Students create a free account (Google or email) and their progress follows them to any device.
 
-**Live site:** https://alfredo.github.io/alfredo-gre-portal/
+**Live site:** https://princekk122.github.io/alfredo-gre-portal/
 
 ## Features
 
@@ -14,7 +14,7 @@ Free GRE practice that anyone can use in the browser. No account or sign-in need
 - **Study calendar** with auto-planning and calendar download (.ics).
 - **Vocabulary** flashcards (140 words), **formula sheet**, **study planner**.
 
-Progress is saved in each visitor's own browser, with backup and restore in Study Tools. The site can be installed to a phone's home screen and works offline once loaded.
+Progress is saved to each student's account in Firebase (and in their browser for offline use), with backup and restore in Study Tools. The site can be installed to a phone's home screen and works offline once loaded.
 
 ## Files
 
@@ -26,6 +26,17 @@ Progress is saved in each visitor's own browser, with backup and restore in Stud
 | `favicon.svg`, `favicon-16.png`, `favicon-32.png` | Browser tab icon |
 | `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `site.webmanifest` | Home-screen icon and install info |
 | `social-card.png` | Preview image when the link is shared |
+| `firebase-config.js` | Your Firebase project settings (fill in once) |
+| `firestore.rules` | Database security rules to paste into Firebase |
 | `sw.js` | Offline support (bump `VERSION` inside it when you upload new files) |
 
 All questions and prompts are original to this project. GRE® is a registered trademark of ETS; this project is not endorsed by or affiliated with ETS.
+
+## Sign-in setup (one time)
+
+1. Create a free project at https://console.firebase.google.com.
+2. Build → Authentication → Get started → enable **Google** and **Email/Password**.
+3. Authentication → Settings → Authorized domains → add `princekk122.github.io`.
+4. Build → Firestore Database → Create database (production mode) → Rules tab → paste `firestore.rules` → Publish.
+5. Project settings → General → Your apps → Web (`</>`) → register the app → copy the config values into `firebase-config.js`.
+6. Upload `firebase-config.js` to GitHub.
