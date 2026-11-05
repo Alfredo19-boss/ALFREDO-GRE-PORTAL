@@ -2,7 +2,7 @@
 
 Free GRE practice in the browser. Students create a free account (Google or email) and their progress follows them to any device.
 
-**Live site:** https://princekk122.github.io/alfredo-gre-portal/
+**Live site:** https://alfredo.github.io/alfredo-gre-portal/
 
 ## Features
 
