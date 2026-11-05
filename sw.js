@@ -1,5 +1,5 @@
 // ALFREDO GRE PORTAL — offline support. Change VERSION whenever you upload new files.
-const VERSION = "alfredo-v10";
+const VERSION = "alfredo-v12";
 const FILES = ["./", "index.html", "styles.css", "app.js", "firebase-config.js", "favicon.svg", "favicon-32.png", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "site.webmanifest"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

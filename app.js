@@ -444,7 +444,27 @@ function renderAuth(){
   const h=document.getElementById("authHost");if(!h)return;
   if(FB.user){h.innerHTML="";return}
   const brand=`<div class="authbrand"><img src="favicon.svg" alt="" width="52" height="52"><div><b>ALFREDO GRE PORTAL</b><span>Free GRE practice · new questions every day</span></div></div>`;
-  const side=`<aside class="authside"><span class="eyebrow" style="color:inherit;opacity:.75">What's inside</span><ul><li>Today's 40: a fresh mixed set made for you every day</li><li>Full-length GRE test in the real format, with adaptive sections</li><li>Marked practice with explanations and an error log</li><li>Study calendar, vocabulary flashcards, formula sheet</li><li>Your progress saved to your account on every device</li></ul></aside>`;
+  const tri=`<svg viewBox="0 0 120 80" width="120" height="80" aria-hidden="true"><polygon points="8,72 112,72 46,8" style="fill:none;stroke:#17233f;stroke-width:2"/><text x="20" y="66" style="font:11px sans-serif;fill:#17233f">40°</text><text x="44" y="26" style="font:11px sans-serif;fill:#17233f">65°</text><text x="92" y="66" style="font:11px sans-serif;fill:#c98a0b;font-weight:700">x°</text></svg>`;
+  const bars=`<svg viewBox="0 0 120 70" width="120" height="70" aria-hidden="true">${[38,52,30,62,46].map((v,i)=>`<rect x="${6+i*23}" y="${66-v}" width="16" height="${v}" rx="2" style="fill:${i===3?"#e8ad35":"#22356b"}"/>`).join("")}<line x1="2" y1="66" x2="118" y2="66" style="stroke:#17233f"/></svg>`;
+  const pencil=`<svg viewBox="0 0 200 30" width="200" height="30" aria-hidden="true"><polygon points="0,15 26,4 26,26" style="fill:#f1d3a3"/><polygon points="0,15 9,11 9,19" style="fill:#2b2b2b"/><rect x="26" y="4" width="140" height="22" style="fill:#e8ad35"/><rect x="26" y="4" width="140" height="7" style="fill:#f2c45e"/><rect x="166" y="4" width="12" height="22" style="fill:#b9bcc5"/><rect x="178" y="4" width="20" height="22" rx="4" style="fill:#e58c8c"/></svg>`;
+  const stickers=[
+   ["left:3%;top:7%;--r:-7deg","",`<span class="lbl">Score report</span><div style="display:flex;gap:16px"><div><span class="lbl" style="margin:0">Verbal</span><span class="big">164</span></div><div><span class="lbl" style="margin:0">Quant</span><span class="big">169</span></div></div>`],
+   ["left:30%;top:3%;--r:4deg;animation-delay:-3s","hide-sm",`<span class="lbl">Select one answer</span><span id="fxBubs">${"ABCDE".split("").map((l,i)=>`<span class="bub ${i===2?"on":""}">${l}</span>`).join("")}</span>`],
+   ["right:4%;top:5%;--r:6deg;animation-delay:-5s","gold",`<span class="lbl">Today's 40</span><span class="big">38/40</span><div style="font-size:12px;margin-top:4px">12-day streak</div>`],
+   ["left:2%;top:44%;--r:5deg;animation-delay:-2s","hide-sm",`<span class="lbl">Geometry</span>${tri}`],
+   ["left:17%;bottom:4%;--r:-5deg;animation-delay:-6s","ink hide-md",`<span class="lbl" style="color:#e8ad35;opacity:1">Vocabulary</span><span class="big" style="font-size:24px">sanguine</span><div style="font-size:12px;opacity:.8"><i>adj.</i> optimistic, even in a bad situation</div>`],
+   ["left:6%;bottom:6%;--r:-4deg;animation-delay:-1s","",`<span style="font-family:var(--f-display);font-size:24px">a² + b² = c²</span>`],
+   ["left:36%;bottom:3%;--r:3deg;animation-delay:-4s","hide-sm",`<span class="lbl">Data interpretation</span>${bars}`],
+   ["right:22%;bottom:7%;--r:-8deg;animation-delay:-7s","hide-sm",`<span class="lbl">Section 3 of 5</span><span class="big" id="fxTimer" style="font-family:var(--f-mono);font-size:24px">0:21:00</span>`],
+   ["right:3%;bottom:4%;--r:7deg;animation-delay:-2.5s","hide-sm",`<span class="lbl">Calculator</span><div class="kp">${["7","8","9","÷","4","5","6","×","1","2","3","−","0",".","√","+"].map(k=>`<i>${k}</i>`).join("")}</div>`],
+   ["right:21%;top:11%;--r:-8deg;animation-delay:-3.5s;padding:6px 8px;background:transparent;box-shadow:none","hide-md",pencil],
+   ["left:53%;top:3%;--r:-3deg;animation-delay:-8s","hide-md",`<span class="lbl">Quantity A · Quantity B</span><span style="font-family:var(--f-display);font-size:18px">x³ &nbsp;vs&nbsp; √x</span>`]
+  ];
+  const bg=`<div class="authbg" id="authBg" aria-hidden="true">${stickers.map(([st,cls,html],i)=>{const pos=st.split(";").filter(x=>/^(left|right|top|bottom):/.test(x.trim())).join(";");const rest=st.split(";").filter(x=>x&&!/^(left|right|top|bottom):/.test(x.trim())).join(";");return `<div class="stkw ${cls.includes("hide-md")?"hide-md":""} ${cls.includes("hide-sm")?"hide-sm":""}" style="${pos};--d:${[14,9,18,11,16,7,13,20,10,22,12][i%11]}"><div class="stk ${cls}" style="${rest};--t:${[11,9,13,10,12,8.5,14,9.5,12.5,10.5,15][i%11]}s">${html}</div></div>`}).join("")}</div>`;
+  const hero=`<div class="authhero"><span class="kick">ALFREDO GRE PORTAL</span><h1>Score higher on the GRE, <em>one day at a time.</em></h1><p>Fresh questions written for you every day, full-length tests that look like the real exam, and a plan that tells you exactly what to study next.</p>
+    <div class="authchips"><span>Today's 40</span><span>Real-format GRE test</span><span>Essay scoring</span><span>Study calendar</span><span>140 power words</span></div>
+    <div class="authstrip" aria-hidden="true"><div class="stk"><span class="lbl">Score report</span><span class="big" style="font-size:22px">164 · 169</span></div><div class="stk gold"><span class="lbl">Today's 40</span><span class="big" style="font-size:22px">38/40</span></div><div class="stk ink"><span class="lbl" style="color:#e8ad35;opacity:1">Word of the day</span><span class="big" style="font-size:20px">sanguine</span></div></div>
+    <div class="authstats"><div><b>130–170</b><span>score estimates</span></div><div><b>Daily</b><span>new questions</span></div><div><b>Free</b><span>no card needed</span></div></div></div>`;
   let card;
   if(FB.state==="loading")card=`${brand}<p class="muted">Checking your sign-in…</p>`;
   else if(FB.state==="setup")card=`${brand}<h2>Sign-in is being set up</h2><p>The portal will open here as soon as sign-in is ready. Please check back soon.</p><p class="muted" style="font-size:13px">Admin: paste your Firebase settings into <code>firebase-config.js</code> and upload it.</p>`;
@@ -462,7 +482,20 @@ function renderAuth(){
       <button class="btn gold" type="submit" style="justify-content:center" ${FB.busy?"disabled":""}>${FB.busy?"Please wait…":fp?"Send reset link":su?"Create my account":"Sign in"}</button>
     </form>
     <div class="row" style="justify-content:space-between;font-size:13px">${fp?`<button class="linkbtn" data-act="authTab" data-v="signin">Back to sign in</button>`:su?`<span class="muted">At least 6 characters for your password.</span>`:`<button class="linkbtn" data-act="authTab" data-v="forgot">Forgot password?</button>`}</div>`}
-  h.innerHTML=`<div class="auth"><div class="authwrap"><div class="authcard">${card}</div>${side}</div></div>`;
+  startAuthFx();
+  h.innerHTML=`<div class="auth">${bg}<div class="authmain">${hero}<div class="authcard">${card}</div></div></div>`;
+}
+let authFxT=null,authFxSec=21*60,authFxBub=2;
+function startAuthFx(){
+  if(authFxT)return;const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  authFxT=setInterval(()=>{if(FB.user){clearInterval(authFxT);authFxT=null;return}
+    authFxSec=authFxSec>0?authFxSec-1:21*60;const t=document.getElementById("fxTimer");if(t)t.textContent=fmtH(authFxSec);
+    if(!reduce&&authFxSec%2===0){authFxBub=(authFxBub+1+Math.floor(Math.random()*3))%5;document.querySelectorAll("#fxBubs .bub").forEach((b,i)=>b.classList.toggle("on",i===authFxBub))}
+  },1000);
+  if(!reduce&&!startAuthFx.bound){startAuthFx.bound=true;let raf=0;
+    window.addEventListener("pointermove",e=>{if(FB.user)return;cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{const bg=document.getElementById("authBg");if(!bg)return;bg.style.setProperty("--mx",((e.clientX/innerWidth)-.5)*2);bg.style.setProperty("--my",((e.clientY/innerHeight)-.5)*2)})},{passive:true});
+    window.addEventListener("deviceorientation",e=>{if(FB.user||e.gamma==null)return;const bg=document.getElementById("authBg");if(!bg)return;bg.style.setProperty("--mx",Math.max(-1,Math.min(1,e.gamma/30)));bg.style.setProperty("--my",Math.max(-1,Math.min(1,(e.beta-45)/30)))},{passive:true});
+  }
 }
 async function authGoogle(){FB.msg="";FB.ok="";FB.busy=true;renderAuth();const pr=new firebase.auth.GoogleAuthProvider();
   try{await FB.auth.signInWithPopup(pr)}catch(e){if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment"].includes(e.code)){try{await FB.auth.signInWithRedirect(pr);return}catch(e2){FB.msg=authError(e2)}}else FB.msg=authError(e)}
@@ -709,7 +742,7 @@ function renderNav(){
 }
 function renderWho(){
   const w=$("#who");if(!w)return;
-  if(FB.user){const nm=S.prog.profile.alias||S.me.name||"Student";w.innerHTML=`${S.me.avatarUrl?`<img src="${esc(S.me.avatarUrl)}" alt="">`:`<span class="initials">${esc(nm.split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase())}</span>`}<div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</b><button class="linkbtn" data-act="signOut">Sign out</button></div>`;return}
+  if(FB.user){w.classList.add("signed");const nm=S.prog.profile.alias||S.me.name||"Student";w.innerHTML=`${S.me.avatarUrl?`<img src="${esc(S.me.avatarUrl)}" alt="">`:`<span class="initials">${esc(nm.split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase())}</span>`}<div style="flex:1;min-width:0"><b class="nm" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</b><button class="linkbtn" data-act="signOut" style="white-space:nowrap">Sign out</button></div>`;return}
   if(!S.ready){w.innerHTML=`<span class="muted">Connecting…</span>`;return}
   if(!S.me||!S.uid){w.innerHTML=PUB?`<span class="muted">Free GRE practice. Your progress is saved on this device. New questions every day.</span>`:`<span class="muted">Progress saves on this device only. Sign in to sync.</span>`;return}
   w.innerHTML=`<img src="${esc(S.me.avatarUrl)}" alt=""><div><b>${esc(S.prog.profile.alias||S.me.name||"You")}</b><div class="muted" style="font-size:11.5px">${S.isOwner?"Portal admin":S.writeBlocked?"View-only access":"Student"}</div></div>`;
